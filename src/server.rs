@@ -1,7 +1,11 @@
-use std::fs;
 use std::io::{BufReader, prelude::*};
 use std::net::{TcpListener, TcpStream};
 use std::collections::HashMap;
+use std::fs;
+use std::path::PathBuf;
+
+use crate::config::AppConfig;
+use crate::static_files::{resolve_content_type, StaticFileResolver};
 
 pub struct Route {
     
@@ -11,11 +15,24 @@ pub struct Server {
     pub port: String,
     pub address: Option<String>,
     pub listener: Option<TcpListener>,
+    pub config: Option<AppConfig>,
+    pub resolver: Option<StaticFileResolver>,
 }
 
 impl Server {
     pub fn setup_server(&mut self) {
         self.address = Some(format!("{}:{}", self.host, self.port));
+        // initialize resolver if config present
+        if let Some(cfg) = &self.config {
+            match StaticFileResolver::from_config(&cfg.static_cfg) {
+                Ok(res) => {
+                    self.resolver = Some(res);
+                }
+                Err(err) => {
+                    eprintln!("ERROR initializing resolver: {:?}", err);
+                }
+            }
+        }
         self.setup_listener();
     }
 
@@ -74,57 +91,37 @@ impl Server {
         let route = http_header[1];
         println!("ROUTE {}",route);
 
-        let mut status_line: &str = "HTTP/1.1 200 OK";
-        let mut contents: String = String::new();
-        let mut length = contents.len();
-        let mut response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
-        match route {
-            "/" => {
-                let file_string_result = fs::read_to_string("public/index.html");
-                match file_string_result {
-                    Ok(string) => {
-                        contents = string;
-                        status_line = "HTTP/1.1 200 OK";
-                length = contents.len();
-                        response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
+        // Default response
+        let mut response: Vec<u8> = b"HTTP/1.1 404 ERROR\r\nContent-Length: 13\r\n\r\nFile Not Found".to_vec();
+
+        if let Some(cfg) = &self.config {
+            if let Some(resolver) = &self.resolver {
+                match resolver.resolve(route) {
+                    Ok(path) => {
+                        match fs::read(&path) {
+                            Ok(bytes) => {
+                                let content_type = resolve_content_type(&path, &cfg.content_types);
+                                let headers = format!(
+                                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: {}\r\n\r\n",
+                                    bytes.len(), content_type
+                                );
+                                let mut buf = headers.into_bytes();
+                                buf.extend_from_slice(&bytes);
+                                response = buf;
+                            }
+                            Err(_e) => {
+                                response = b"HTTP/1.1 404 ERROR\r\nContent-Length: 13\r\n\r\nFile Not Found".to_vec();
+                            }
+                        }
                     }
-                    Err(_error) => {
-                        contents = "File Not Found".to_string();
-                        status_line = "HTTP/1.1 404 ERROR";
-                length = contents.len();
-                        response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
+                    Err(_e) => {
+                        response = b"HTTP/1.1 404 ERROR\r\nContent-Length: 13\r\n\r\nFile Not Found".to_vec();
                     }
                 }
-            },
-            "/index.css"=> {
-                let file_string_result = fs::read_to_string("public/index.css");
-                match file_string_result {
-                    Ok(string) => {
-                        contents = string;
-                        status_line = "HTTP/1.1 200 OK";
-                        length = contents.len();
-                        response = format!("{status_line}\r\nContent-Length: {length} \r\nContent-Type: text/css\r\n\r\n{contents}");
-                        println!("Response {}",response);
-                    }
-                    Err(_error) => {
-                        contents = "File Not Found".to_string();
-                        status_line = "HTTP/1.1 404 ERROR";
-                length = contents.len();
-                        response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
-                    }
-                }
-
-            },
-            _ => {
-
-                contents = "File Not Found".to_string();
-                status_line = "HTTP/1.1 404 ERROR";
-                length = contents.len();
-                response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
             }
         }
         
-        match tcp_stream.write_all(response.as_bytes()) {
+        match tcp_stream.write_all(&response) {
             Ok(_result) => {}
             Err(error) => {
                 eprintln!("ERROR: {:?}", error)

@@ -3,15 +3,28 @@ use dotenv::dotenv;
 
 use crate::server::Server;
 pub mod server;
+pub mod config;
+pub mod static_files;
 
 fn main() {
     dotenv().expect(".env file not found");
 
+    let config_path = env::var("CONFIG_PATH").unwrap_or_else(|_| "config.yaml".to_string());
+    let config = match config::load_config(&config_path) {
+        Ok(c) => c,
+        Err(err) => {
+            eprintln!("Failed to load config: {:?}", err);
+            std::process::exit(1);
+        }
+    };
+
     let mut server:Server = Server {
-        port: env::var("PORT").unwrap_or_else(|_| "8080".to_string()),
-        host: env::var("HOST").unwrap_or_else(|_|"0.0.0.0".to_string()),
+        port: config.server.port.to_string(),
+        host: config.server.host.clone(),
         address: None,
         listener: None,
+        config: Some(config),
+        resolver: None,
     };
 
    server.setup_server();
