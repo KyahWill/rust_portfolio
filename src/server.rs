@@ -72,25 +72,87 @@ impl Server {
     }
 
     fn handle_stream(&self, mut tcp_stream: TcpStream) {
-        let buf_reader = BufReader::new(&tcp_stream);
-        let http_request: Vec<String> = buf_reader
-            .lines()
-            .map(|result| match result {
-                Ok(result) => return result,
-                Err(error) => {
-                    eprintln!("ERROR: {:?}", error);
-                    panic!();
+        let mut http_request_lines: Vec<String> = Vec::new();
+        let mut bad_request = false;
+        let mut error_response = b"HTTP/1.1 400 Bad Request\r\n\r\nInvalid Request".to_vec();
+
+        // Scope for the BufReader to release the immutable borrow on tcp_stream
+        {
+            let mut buf_reader = BufReader::new(&tcp_stream);
+            loop {
+                let mut line_buf: Vec<u8> = Vec::new();
+                
+                // Read bytes until a newline
+                match buf_reader.read_until(b'\n', &mut line_buf) {
+                    Ok(0) => {
+                        // Connection closed, 0 bytes read
+                        eprintln!("Connection closed while reading headers");
+                        bad_request = true;
+                        break;
+                    }
+                    Ok(_) => {
+                        // Try to convert the byte line to UTF-8
+                        match std::str::from_utf8(&line_buf) {
+                            Ok(line_str) => {
+                                let trimmed_line = line_str.trim_end(); // Remove \n or \r\n
+                                if trimmed_line.is_empty() {
+                                    // Empty line signifies end of headers
+                                    break;
+                                }
+                                http_request_lines.push(trimmed_line.to_string());
+                            }
+                            Err(e) => {
+                                // Handle non-UTF-8 data (e.g., HTTPS handshake)
+                                eprintln!("ERROR: Invalid UTF-8 in request header: {:?}", e);
+                                error_response =
+                                    b"HTTP/1.1 400 Bad Request\r\n\r\nInvalid UTF-8 in request".to_vec();
+                                bad_request = true;
+                                break;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("ERROR reading from stream: {:?}", e);
+                        bad_request = true;
+                        break;
+                    }
                 }
-            })
-            .take_while(|line| !line.is_empty())
-            .collect();
+            }
+        } // `buf_reader` is dropped here
 
-        let http_header: Vec<&str>= http_request[0].split(' ').collect();
+        // Handle any errors found during reading
+        if bad_request {
+            tcp_stream.write_all(&error_response).ok(); // Ignore write errors
+            return;
+        }
+
+        if http_request_lines.is_empty() {
+            eprintln!("Received empty request");
+            tcp_stream.write_all(&error_response).ok();
+            return;
+        }
+
+        // --- Start of request parsing ---
+        let http_header: Vec<&str> = http_request_lines[0].split(' ').collect();
+
+        // Add a check to prevent panic on malformed header
+        if http_header.len() < 2 {
+            eprintln!("Malformed request line: {}", http_request_lines[0]);
+            let response = b"HTTP/1.1 400 Bad Request\r\n\r\nMalformed request line";
+            tcp_stream.write_all(response).ok();
+            return;
+        }
+
         let route = http_header[1];
-        println!("ROUTE {}",route);
+        println!("ROUTE {}", route);
+        // --- End of request parsing ---
 
+
+        // --- Start of your original file-serving logic ---
+        
         // Default response
-        let mut response: Vec<u8> = b"HTTP/1.1 404 ERROR\r\nContent-Length: 13\r\n\r\nFile Not Found".to_vec();
+        let mut response: Vec<u8> =
+            b"HTTP/1.1 404 ERROR\r\nContent-Length: 13\r\n\r\nFile Not Found".to_vec();
 
         if let Some(cfg) = &self.config {
             if let Some(resolver) = &self.resolver {
@@ -98,33 +160,40 @@ impl Server {
                     Ok(path) => {
                         match fs::read(&path) {
                             Ok(bytes) => {
+                                // File found, build 200 OK response
                                 let content_type = resolve_content_type(&path, &cfg.content_types);
                                 let headers = format!(
                                     "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: {}\r\n\r\n",
-                                    bytes.len(), content_type
+                                    bytes.len(),
+                                    content_type
                                 );
                                 let mut buf = headers.into_bytes();
                                 buf.extend_from_slice(&bytes);
                                 response = buf;
                             }
                             Err(_e) => {
-                                response = b"HTTP/1.1 404 ERROR\r\nContent-Length: 13\r\n\r\nFile Not Found".to_vec();
+                                // File read error, default 404 response is already set
+                                eprintln!("File not found or unreadable: {:?}", path);
                             }
                         }
                     }
                     Err(_e) => {
-                        response = b"HTTP/1.1 404 ERROR\r\nContent-Length: 13\r\n\r\nFile Not Found".to_vec();
+                        // Route not resolved, default 404 response is already set
+                        eprintln!("Route not resolved: {}", route);
                     }
                 }
             }
         }
-        
+        // --- End of your original file-serving logic ---
+
+
+        // Write the final response back to the stream
         match tcp_stream.write_all(&response) {
             Ok(_result) => {}
             Err(error) => {
-                eprintln!("ERROR: {:?}", error)
+                eprintln!("ERROR writing response: {:?}", error)
             }
-        };
+        };        
     }
 }
 
