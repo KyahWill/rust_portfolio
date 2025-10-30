@@ -1,13 +1,10 @@
 use std::env;
-use dotenv::dotenv;
-
 use crate::server::Server;
 pub mod server;
 pub mod config;
 pub mod static_files;
 
 fn main() {
-    dotenv().expect(".env file not found");
 
     let config_path = env::var("CONFIG_PATH").unwrap_or_else(|_| "config.yaml".to_string());
     let config = match config::load_config(&config_path) {

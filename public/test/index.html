@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Will Vincent Parrone — Portfolio</title>
+        <link rel="stylesheet" href="/index.css" />
+    </head>
+    <body>
+        <header class="site-header">
+            <nav class="nav" aria-label="Primary">
+                <a class="brand" href="#home">WVP</a>
+                <button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu">Menu</button>
+                <ul id="nav-menu" class="nav-menu">
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#experience">Experience</a></li>
+                    <li><a href="#competencies">Competencies</a></li>
+                    <li><a href="#education">Education</a></li>
+                    <li><a href="#organizations">Organizations</a></li>
+                    <li><a href="#certificates">Certificates</a></li>
+                    <li><a href="#awards">Awards</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main id="home">
+            <section id="about" class="section hero">
+                <div class="container">
+                    <h1 class="headline">Will Vincent Parrone</h1>
+                    <p class="lead">I'm a generalist with extensive experience working as a Software Developer and a Project Manager, while also organizing charity projects on the side.</p>
+                    <div class="contact-inline">
+                        <a href="tel:+639206530261">(63) 920 653 0261</a>
+                        <span class="sep">•</span>
+                        <a href="mailto:wvparrone@gmail.com">wvparrone@gmail.com</a>
+                        <span class="sep">•</span>
+                        <a href="https://github.com/kyahwill/" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <div class="container">
+                <small>© <span id="year"></span> Will Vincent Parrone</small>
+            </div>
+        </footer>
+        <script>
+            const yearEl = document.getElementById('year');
+            if (yearEl) { yearEl.textContent = new Date().getFullYear(); }
+            const toggle = document.querySelector('.nav-toggle');
+            const menu = document.getElementById('nav-menu');
+            if (toggle && menu) {
+                toggle.addEventListener('click', () => {
+                    const open = menu.classList.toggle('open');
+                    toggle.setAttribute('aria-expanded', String(open));
+                });
+            }
+        </script>
+    </body>
+</html>
