@@ -76,6 +76,21 @@ h1, h2, h3 {
 .nav-menu a { color: var(--text); text-decoration: none; }
 .nav-menu a:hover { color: var(--brand); }
 
+.nav-contact-button {
+    background: var(--brand);
+    color: #ffffff !important;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.nav-contact-button:hover {
+    background: var(--accent);
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+
 @media (max-width: 840px) {
     .nav-toggle { display: inline-block; }
     .nav-menu {
@@ -144,6 +159,27 @@ h1, h2, h3 {
 
 /* Footer */
 .site-footer { border-top: 1px solid var(--border); padding: 1.5rem 0; color: var(--muted); }
+
+/* Contact Button */
+.contact-button {
+    display: inline-block;
+    background: var(--brand);
+    color: #ffffff;
+    text-decoration: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    margin-top: 1rem;
+    transition: background 0.2s, transform 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.contact-button:hover {
+    background: var(--accent);
+    transform: translateY(-2px);
+    color: #ffffff;
+}
 
 /* Utilities */
 a { color: var(--brand); }
