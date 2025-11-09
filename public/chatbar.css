@@ -12,29 +12,31 @@
     position: fixed;
     right: 1.5rem;
     bottom: 1.5rem;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    border-radius: 0;
     background: var(--brand);
     color: white;
-    border: none;
+    border: 4px solid var(--border);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
-    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 6px 6px 0 0 var(--shadow);
+    transition: transform 0.1s, box-shadow 0.1s;
     pointer-events: auto;
     z-index: 101;
+    font-weight: 700;
 }
 
 .chatbar-toggle:hover {
-    transform: scale(1.05);
-    box-shadow: 0 6px 16px rgba(74, 144, 226, 0.25);
+    transform: translate(-2px, -2px);
+    box-shadow: 8px 8px 0 0 var(--shadow);
 }
 
 .chatbar-toggle:active {
-    transform: scale(0.95);
+    transform: translate(2px, 2px);
+    box-shadow: 4px 4px 0 0 var(--shadow);
 }
 
 .chatbar-panel {
@@ -45,13 +47,13 @@
     width: 100%;
     max-width: 400px;
     background: var(--panel);
-    border-left: 1px solid var(--border);
+    border-left: 4px solid var(--border);
     display: flex;
     flex-direction: column;
     transform: translateX(100%);
     transition: transform 0.3s ease-in-out;
     pointer-events: auto;
-    box-shadow: -4px 0 12px rgba(74, 144, 226, 0.15);
+    box-shadow: -8px 0 0 0 var(--shadow);
 }
 
 .chatbar.open .chatbar-panel {
@@ -67,7 +69,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 1rem 1.25rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 4px solid var(--border);
     background: var(--panel);
     gap: 0.5rem;
 }
@@ -81,44 +83,57 @@
 .chatbar-header h3 {
     margin: 0;
     font-size: 1.25rem;
-    font-weight: 600;
+    font-weight: 900;
     color: var(--text);
+    letter-spacing: -0.5px;
 }
 
 .chatbar-close {
-    background: transparent;
-    border: none;
-    color: var(--muted);
+    background: var(--yellow);
+    border: 3px solid var(--border);
+    color: var(--text);
     cursor: pointer;
-    padding: 0.25rem;
+    padding: 0.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
-    transition: background 0.2s, color 0.2s;
+    border-radius: 0;
+    box-shadow: 3px 3px 0 0 var(--shadow);
+    transition: transform 0.1s, box-shadow 0.1s;
 }
 
 .chatbar-close:hover {
-    background: var(--bg);
-    color: var(--text);
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 0 var(--shadow);
+}
+
+.chatbar-close:active {
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0 0 var(--shadow);
 }
 
 .chatbar-delete {
-    background: transparent;
-    border: none;
-    color: var(--muted);
+    background: var(--pink);
+    border: 3px solid var(--border);
+    color: white;
     cursor: pointer;
-    padding: 0.25rem;
+    padding: 0.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
-    transition: background 0.2s, color 0.2s;
+    border-radius: 0;
+    box-shadow: 3px 3px 0 0 var(--shadow);
+    transition: transform 0.1s, box-shadow 0.1s;
 }
 
 .chatbar-delete:hover {
-    background: var(--bg);
-    color: #dc3545;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 0 var(--shadow);
+}
+
+.chatbar-delete:active {
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0 0 var(--shadow);
 }
 
 /* Hide delete button on mobile, show close button */
@@ -157,6 +172,7 @@
         opacity: 0;
         transform: translateY(10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -171,10 +187,13 @@
     background: var(--brand);
     color: white;
     padding: 0.75rem 1rem;
-    border-radius: 18px 18px 4px 18px;
+    border-radius: 0;
+    border: 3px solid var(--border);
+    box-shadow: 4px 4px 0 0 var(--shadow);
     margin: 0;
     font-size: 0.95rem;
     line-height: 1.4;
+    font-weight: 600;
 }
 
 .chatbar-message-system,
@@ -187,11 +206,13 @@
     background: var(--bg);
     color: var(--text);
     padding: 0.75rem 1rem;
-    border-radius: 18px 18px 18px 4px;
+    border-radius: 0;
     margin: 0;
     font-size: 0.95rem;
     line-height: 1.4;
-    border: 1px solid var(--border);
+    border: 3px solid var(--border);
+    box-shadow: 4px 4px 0 0 var(--shadow);
+    font-weight: 500;
 }
 
 /* Markdown content styles */
@@ -199,8 +220,9 @@
     background: var(--bg);
     color: var(--text);
     padding: 0.75rem 1rem;
-    border-radius: 18px 18px 18px 4px;
-    border: 1px solid var(--border);
+    border-radius: 0;
+    border: 3px solid var(--border);
+    box-shadow: 4px 4px 0 0 var(--shadow);
     font-size: 0.95rem;
     line-height: 1.6;
 }
@@ -258,19 +280,30 @@
 }
 
 .chatbar-message-content code {
-    background: rgba(74, 144, 226, 0.1);
-    padding: 0.2em 0.4em;
-    border-radius: 3px;
+    background: rgba(14, 165, 233, 0.15);
+    padding: 0.2em 0.5em;
+    border-radius: 0;
+    border: 2px solid var(--border);
     font-family: 'Courier New', Courier, monospace;
     font-size: 0.9em;
+    font-weight: 600;
 }
 
 .chatbar-message-content pre {
-    background: rgba(74, 144, 226, 0.1);
+    background: var(--text);
     padding: 0.75rem;
-    border-radius: 6px;
+    border-radius: 0;
+    border: 3px solid var(--border);
     overflow-x: auto;
     margin: 0.75rem 0;
+    box-shadow: 3px 3px 0 0 var(--shadow);
+}
+
+.chatbar-message-content pre code {
+    background: transparent;
+    border: none;
+    color: #0ea5e9;
+    font-weight: 400;
 }
 
 .chatbar-message-content pre code {
@@ -300,7 +333,7 @@
 
 .chatbar-input-container {
     padding: 1rem;
-    border-top: 1px solid var(--border);
+    border-top: 4px solid var(--border);
     background: var(--panel);
 }
 
@@ -313,19 +346,19 @@
 .chatbar-input {
     flex: 1;
     padding: 0.75rem 1rem;
-    border: 1px solid var(--border);
-    border-radius: 24px;
+    border: 3px solid var(--border);
+    border-radius: 0;
     background: var(--bg);
     color: var(--text);
     font-size: 0.95rem;
     font-family: inherit;
+    font-weight: 500;
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: box-shadow 0.1s;
 }
 
 .chatbar-input:focus {
-    border-color: var(--brand);
-    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+    box-shadow: 4px 4px 0 0 var(--brand);
 }
 
 .chatbar-input::placeholder {
@@ -333,27 +366,29 @@
 }
 
 .chatbar-send {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    border-radius: 0;
     background: var(--brand);
     color: white;
-    border: none;
+    border: 3px solid var(--border);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s, background 0.2s;
+    box-shadow: 4px 4px 0 0 var(--shadow);
+    transition: transform 0.1s, box-shadow 0.1s;
     flex-shrink: 0;
 }
 
 .chatbar-send:hover {
-    background: var(--accent);
-    transform: scale(1.05);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 0 var(--shadow);
 }
 
 .chatbar-send:active {
-    transform: scale(0.95);
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 0 var(--shadow);
 }
 
 .chatbar-send:disabled {
@@ -367,12 +402,12 @@
     .chatbar.open .chatbar-panel {
         transform: translateX(0);
     }
-    
+
     /* Show toggle button when closed on desktop */
     .chatbar:not(.open) .chatbar-toggle {
         display: flex;
     }
-    
+
     /* Hide toggle button when open on desktop */
     .chatbar.open .chatbar-toggle {
         display: none;
@@ -384,7 +419,7 @@
     .chatbar-panel {
         max-width: 100%;
     }
-    
+
     .chatbar-toggle {
         right: 1rem;
         bottom: 1rem;
@@ -410,4 +445,3 @@
 .chatbar-messages::-webkit-scrollbar-thumb:hover {
     background: var(--muted);
 }
-
