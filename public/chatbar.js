@@ -62,9 +62,23 @@
             if (input) input.value = '';
 
             // Simulate response (you can replace this with actual API call)
-            setTimeout(() => {
-                addMessage('Thanks for your message! This is a demo chatbar. You can customize this to connect to your preferred chat service.', 'system');
-            }, 500);
+
+            console.log('Sending message to API: ', message);
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('API response: ', data);
+                addMessage(data.response, 'system');
+            })
+            .catch(error => {
+                console.error('Error sending message to API: ', error);
+            });
         }
 
         // Event listeners

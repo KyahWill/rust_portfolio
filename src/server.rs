@@ -1,9 +1,12 @@
 use std::io::{BufReader, prelude::*};
 use std::net::{TcpListener, TcpStream};
 use std::fs;
+use std::collections::HashMap;
 
 use crate::config::AppConfig;
 use crate::static_files::{resolve_content_type, StaticFileResolver};
+
+use serde::{Deserialize, Serialize};
 
 pub struct Route {
     
@@ -62,7 +65,7 @@ impl Server {
                             self.handle_stream(tcp_stream);
                         }
                         Err(error) => {
-                            eprintln!("ERRLR: {:?}", error);
+                            eprintln!("ERROR listening: {:?}", error);
                         }
                     }
                 }
@@ -75,8 +78,10 @@ impl Server {
         let mut http_request_lines: Vec<String> = Vec::new();
         let mut bad_request = false;
         let mut error_response = b"HTTP/1.1 400 Bad Request\r\n\r\nInvalid Request".to_vec();
+        let mut headers_map: HashMap<String, String> = HashMap::new();
+        let mut request_body: Option<Vec<u8>> = None;
 
-        // Scope for the BufReader to release the immutable borrow on tcp_stream
+        // Read headers and body using BufReader
         {
             let mut buf_reader = BufReader::new(&tcp_stream);
             loop {
@@ -97,7 +102,34 @@ impl Server {
                                 let trimmed_line = line_str.trim_end(); // Remove \n or \r\n
                                 if trimmed_line.is_empty() {
                                     // Empty line signifies end of headers
+                                    // Now read the body if Content-Length is present
+                                    let content_length = headers_map
+                                        .get("content-length")
+                                        .and_then(|s| s.parse::<usize>().ok())
+                                        .unwrap_or(0);
+                                    
+                                    if content_length > 0 {
+                                        let mut body = vec![0u8; content_length];
+                                        match buf_reader.read_exact(&mut body) {
+                                            Ok(_) => {
+                                                request_body = Some(body);
+                                            }
+                                            Err(e) => {
+                                                eprintln!("Error reading request body: {:?}", e);
+                                                bad_request = true;
+                                                break;
+                                            }
+                                        }
+                                    }
                                     break;
+                                }
+                                // Parse headers (skip request line)
+                                if !http_request_lines.is_empty() {
+                                    if let Some(colon_pos) = trimmed_line.find(':') {
+                                        let key = trimmed_line[..colon_pos].trim().to_lowercase();
+                                        let value = trimmed_line[colon_pos + 1..].trim().to_string();
+                                        headers_map.insert(key, value);
+                                    }
                                 }
                                 http_request_lines.push(trimmed_line.to_string());
                             }
@@ -143,10 +175,45 @@ impl Server {
             return;
         }
 
+        let method = http_header[0];
         let route = http_header[1];
-        println!("ROUTE {}", route);
+        println!("METHOD: {}, ROUTE: {}", method, route);
         // --- End of request parsing ---
 
+        // Handle /api/chat route
+        if route == "/api/chat" && method == "POST" {
+            if let Some(body) = request_body {
+                println!("Content Length: {}", body.len());
+                println!("Body: {:?}", body);
+                match self.handle_chat_api(&body) {
+                    Ok(json_response) => {
+                        let response_body = json_response.as_bytes();
+                        let headers = format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\n\r\n",
+                            response_body.len()
+                        );
+                        let mut response = headers.into_bytes();
+                        response.extend_from_slice(response_body);
+                        tcp_stream.write_all(&response).ok();
+                        return;
+                    }
+                    Err(e) => {
+                        eprintln!("Error handling chat API: {:?}", e);
+                        let error_response = format!(
+                            "HTTP/1.1 500 Internal Server Error\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{{\"error\":\"{}\"}}",
+                            e.len(),
+                            e
+                        );
+                        tcp_stream.write_all(error_response.as_bytes()).ok();
+                        return;
+                    }
+                }
+            } else {
+                let response = b"HTTP/1.1 400 Bad Request\r\n\r\nMissing request body";
+                tcp_stream.write_all(response).ok();
+                return;
+            }
+        }
 
         // --- Start of your original file-serving logic ---
         
@@ -184,8 +251,6 @@ impl Server {
                 }
             }
         }
-        // --- End of your original file-serving logic ---
-
 
         // Write the final response back to the stream
         match tcp_stream.write_all(&response) {
@@ -194,6 +259,111 @@ impl Server {
                 eprintln!("ERROR writing response: {:?}", error)
             }
         };        
+    }
+
+    fn handle_chat_api(&self, body: &[u8]) -> Result<String, String> {
+        println!("Handling chat API");
+        println!("Body: {:?}", body);
+        // Parse request JSON
+        #[derive(Deserialize)]
+        struct ChatRequest {
+            message: String,
+        }
+
+        let request: ChatRequest = serde_json::from_slice(body)
+            .map_err(|e| format!("Failed to parse request JSON: {}", e))?;
+
+        // Get API key from environment variable
+        let api_key = std::env::var("GEMINI_API_KEY")
+            .map_err(|_| "GEMINI_API_KEY environment variable not set".to_string())?;
+
+        // Prepare Gemini API request
+        #[derive(Serialize, Debug)]
+        struct GeminiRequest {
+            contents: Vec<GeminiContent>,
+        }
+
+        #[derive(Serialize, Debug)]
+        struct GeminiContent {
+            parts: Vec<GeminiPart>,
+        }
+
+        #[derive(Serialize, Debug)]
+        struct GeminiPart {
+            text: String,
+        }
+
+        let gemini_request = GeminiRequest {
+            contents: vec![GeminiContent {
+                parts: vec![GeminiPart {
+                    text: request.message,
+                }],
+            }],
+        };
+
+        println!("Gemini Request: {:?}", gemini_request);
+
+        // Make request to Google Gemini API
+        println!("Making request to Google Gemini API");
+        let url = format!(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={}",
+            api_key
+        );
+
+        let response = ureq::post(&url)
+            .set("Content-Type", "application/json")
+            .send_json(&gemini_request)
+            .map_err(|e| format!("Failed to call Gemini API: {}", e))?;
+
+        println!("Gemini Response: {:?}", response);
+
+        // Parse Gemini response
+        #[derive(Deserialize, Debug)]
+        struct GeminiResponse {
+            candidates: Vec<GeminiCandidate>,
+        }
+
+        #[derive(Deserialize, Debug)]
+        struct GeminiCandidate {
+            content: GeminiContentResponse,
+        }
+
+        #[derive(Deserialize, Debug)]
+        struct GeminiContentResponse {
+            parts: Vec<GeminiPartResponse>,
+        }
+
+        #[derive(Deserialize, Debug)]
+        struct GeminiPartResponse {
+            text: String,
+        }
+
+        let gemini_response: GeminiResponse = response
+            .into_json()
+            .map_err(|e| format!("Failed to parse Gemini response: {}", e))?;
+
+        println!("Gemini Response: {:?}", gemini_response);
+
+        // Extract the text response
+        let response_text = gemini_response
+            .candidates
+            .first()
+            .and_then(|c| c.content.parts.first())
+            .map(|p| p.text.clone())
+            .ok_or_else(|| "No response text in Gemini API response".to_string())?;
+
+        // Return JSON response for chatbar.js
+        #[derive(Serialize)]
+        struct ChatResponse {
+            response: String,
+        }
+
+        let chat_response = ChatResponse {
+            response: response_text,
+        };
+
+        serde_json::to_string(&chat_response)
+            .map_err(|e| format!("Failed to serialize response: {}", e))
     }
 }
 
