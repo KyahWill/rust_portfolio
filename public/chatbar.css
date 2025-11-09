@@ -69,6 +69,13 @@
     padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--border);
     background: var(--panel);
+    gap: 0.5rem;
+}
+
+.chatbar-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .chatbar-header h3 {
@@ -94,6 +101,38 @@
 .chatbar-close:hover {
     background: var(--bg);
     color: var(--text);
+}
+
+.chatbar-delete {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.chatbar-delete:hover {
+    background: var(--bg);
+    color: #dc3545;
+}
+
+/* Hide delete button on mobile, show close button */
+@media (max-width: 767px) {
+    .chatbar-delete {
+        display: none;
+    }
+}
+
+/* On desktop, show both close and delete buttons */
+@media (min-width: 768px) {
+    .chatbar-close {
+        display: flex;
+    }
 }
 
 .chatbar-messages {
@@ -321,6 +360,23 @@
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
+}
+
+/* Desktop mode - allow closing */
+@media (min-width: 768px) {
+    .chatbar.open .chatbar-panel {
+        transform: translateX(0);
+    }
+    
+    /* Show toggle button when closed on desktop */
+    .chatbar:not(.open) .chatbar-toggle {
+        display: flex;
+    }
+    
+    /* Hide toggle button when open on desktop */
+    .chatbar.open .chatbar-toggle {
+        display: none;
+    }
 }
 
 /* Responsive adjustments */

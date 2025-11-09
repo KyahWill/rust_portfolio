@@ -25,10 +25,6 @@
                 <div id="blogs-list" class="blogs-list">
                     <p>Loading blogs...</p>
                 </div>
-                <div id="blog-post" class="blog-post" style="display: none;">
-                    <button id="blog-back" class="blog-back" aria-label="Back to blogs">← Back to Blogs</button>
-                    <article id="blog-content" class="blog-content"></article>
-                </div>
             </div>
         </main>
 
@@ -96,13 +92,6 @@
 
             // Blog functionality
             const blogsListEl = document.getElementById('blogs-list');
-            const blogPostEl = document.getElementById('blog-post');
-            const blogContentEl = document.getElementById('blog-content');
-            const blogBackBtn = document.getElementById('blog-back');
-
-            // Check if we're viewing a specific blog post from URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const blogSlug = urlParams.get('post');
 
             async function loadBlogs() {
                 try {
@@ -125,92 +114,19 @@
                     return;
                 }
 
+                // Use proper URLs for blog links
                 const html = blogs.map(blog => `
                     <article class="blog-item">
-                        <h3><a href="#" class="blog-link" data-slug="${blog.slug}">${blog.title}</a></h3>
+                        <h3><a href="/blogs/${blog.slug}" class="blog-link">${blog.title}</a></h3>
                         <div class="blog-meta">Published: ${blog.published_date}</div>
                     </article>
                 `).join('');
 
                 blogsListEl.innerHTML = html;
-
-                // Add click handlers for blog links
-                blogsListEl.querySelectorAll('.blog-link').forEach(link => {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        const slug = link.getAttribute('data-slug');
-                        loadBlogPost(slug);
-                    });
-                });
             }
 
-            async function loadBlogPost(slug) {
-                try {
-                    const response = await fetch(`/api/blog/${slug}`);
-                    const data = await response.json();
-                    displayBlogPost(data);
-                    // Update URL without reload
-                    window.history.pushState({ slug }, '', `/blogs?post=${slug}`);
-                    // Update page title
-                    document.title = `${slug} — Blogs — Will Vincent Parrone`;
-                } catch (error) {
-                    console.error('Error loading blog post:', error);
-                    if (blogContentEl) {
-                        blogContentEl.innerHTML = '<p>Error loading blog post. Please try again later.</p>';
-                    }
-                }
-            }
-
-            function displayBlogPost(blog) {
-                if (!blogContentEl || !blogPostEl || !blogsListEl) return;
-
-                blogContentEl.innerHTML = `
-                    <header class="blog-header">
-                        <h2>${blog.slug}</h2>
-                        <div class="blog-meta">Published: ${blog.published_date}</div>
-                    </header>
-                    <div class="blog-body">${blog.content}</div>
-                `;
-
-                blogsListEl.style.display = 'none';
-                blogPostEl.style.display = 'block';
-
-                // Scroll to top
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-
-            if (blogBackBtn) {
-                blogBackBtn.addEventListener('click', () => {
-                    if (blogPostEl) blogPostEl.style.display = 'none';
-                    if (blogsListEl) blogsListEl.style.display = 'block';
-                    // Reset URL
-                    window.history.pushState({}, '', '/blogs');
-                    // Reset page title
-                    document.title = 'Blogs — Will Vincent Parrone';
-                    loadBlogs();
-                });
-            }
-
-            // Load blog post if slug is in URL, otherwise load blog list
-            if (blogSlug) {
-                loadBlogPost(blogSlug);
-            } else {
-                loadBlogs();
-            }
-
-            // Handle browser back/forward buttons
-            window.addEventListener('popstate', (e) => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const slug = urlParams.get('post');
-                if (slug) {
-                    loadBlogPost(slug);
-                } else {
-                    if (blogPostEl) blogPostEl.style.display = 'none';
-                    if (blogsListEl) blogsListEl.style.display = 'block';
-                    document.title = 'Blogs — Will Vincent Parrone';
-                    loadBlogs();
-                }
-            });
+            // Load blogs on page load
+            loadBlogs();
         </script>
     </body>
 </html>

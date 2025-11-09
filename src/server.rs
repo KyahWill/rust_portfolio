@@ -237,6 +237,37 @@ impl Server {
             }
         }
 
+        // Handle /blogs/:slug route - serve individual blog posts as HTML pages
+        if route.starts_with("/blogs/") && method == "GET" {
+            let slug = route.strip_prefix("/blogs/").unwrap_or("");
+            // Don't treat /blogs as a slug (it should be handled by static file resolver)
+            if !slug.is_empty() {
+                match self.handle_blog_post_page(slug) {
+                    Ok(html_response) => {
+                        let response_body = html_response.as_bytes();
+                        let headers = format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\n\r\n",
+                            response_body.len()
+                        );
+                        let mut response = headers.into_bytes();
+                        response.extend_from_slice(response_body);
+                        tcp_stream.write_all(&response).ok();
+                        return;
+                    }
+                    Err(e) => {
+                        eprintln!("Error handling blog post page: {:?}", e);
+                        let error_response = format!(
+                            "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: {}\r\n\r\n<html><body><h1>Blog Post Not Found</h1><p>{}</p></body></html>",
+                            e.len() + 50,
+                            e
+                        );
+                        tcp_stream.write_all(error_response.as_bytes()).ok();
+                        return;
+                    }
+                }
+            }
+        }
+
         // Handle /api/chat route
         if route == "/api/chat" && method == "POST" {
             if let Some(body) = request_body {
@@ -615,6 +646,150 @@ impl Server {
             .map_err(|e| format!("Failed to serialize blog post: {}", e))
     }
 
+    fn handle_blog_post_page(&self, slug: &str) -> Result<String, String> {
+        let blog_path = Path::new("public/blogs").join(format!("{}.md", slug));
+        
+        if !blog_path.exists() {
+            return Err(format!("Blog post '{}' not found", slug));
+        }
+
+        let markdown_content = fs::read_to_string(&blog_path)
+            .map_err(|e| format!("Failed to read blog file: {}", e))?;
+
+        // Parse markdown to HTML
+        let parser = Parser::new_ext(&markdown_content, Options::all());
+        let mut html_content = String::new();
+        html::push_html(&mut html_content, parser);
+
+        // Extract metadata
+        let title = markdown_content.lines()
+            .next()
+            .unwrap_or(slug)
+            .trim_start_matches('#')
+            .trim()
+            .to_string();
+        
+        let published_date = markdown_content.lines()
+            .find(|line| line.contains("**Published:**") || line.contains("Published:"))
+            .and_then(|line| {
+                line.split("Published:").nth(1)
+                    .or_else(|| line.split("**Published:**").nth(1))
+                    .map(|s| s.trim().trim_matches('*').trim().to_string())
+            })
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        // Generate HTML page
+        let html_page = format!(r#"<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{} — Blogs — Will Vincent Parrone</title>
+        <link rel="stylesheet" href="/index.css" />
+        <link rel="stylesheet" href="/chatbar.css" />
+    </head>
+    <body>
+        <header class="site-header">
+            <nav class="nav" aria-label="Primary">
+                <a class="brand" href="/">WVP</a>
+                <button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu">Menu</button>
+                <ul id="nav-menu" class="nav-menu">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/blogs">Blogs</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main>
+            <div class="container" style="padding: 3rem 0;">
+                <div class="blog-post">
+                    <button id="blog-back" class="blog-back" aria-label="Back to blogs">← Back to Blogs</button>
+                    <article class="blog-content">
+                        <header class="blog-header">
+                            <h1>{}</h1>
+                            <div class="blog-meta">Published: {}</div>
+                        </header>
+                        <div class="blog-body">{}</div>
+                    </article>
+                </div>
+            </div>
+        </main>
+
+        <footer class="site-footer">
+            <div class="container">
+                <small>© <span id="year"></span> Will Vincent Parrone</small>
+            </div>
+        </footer>
+
+        <!-- Chatbar Component -->
+        <div id="chatbar" class="chatbar">
+            <button class="chatbar-toggle" aria-label="Toggle chat" aria-expanded="false">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+            </button>
+            <div class="chatbar-panel">
+                <div class="chatbar-header">
+                    <h3>Chat</h3>
+                    <button class="chatbar-close" aria-label="Close chat">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="chatbar-messages" id="chatbar-messages">
+                    <div class="chatbar-message chatbar-message-system">
+                        <p>Hello! How can I help you today?</p>
+                    </div>
+                </div>
+                <div class="chatbar-input-container">
+                    <form id="chatbar-form" class="chatbar-form">
+                        <input 
+                            type="text" 
+                            id="chatbar-input" 
+                            class="chatbar-input" 
+                            placeholder="Type your message..." 
+                            autocomplete="off"
+                            aria-label="Message input"
+                        />
+                        <button type="submit" class="chatbar-send" aria-label="Send message">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"/>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script src="/chatbar.js"></script>
+        <script>
+            const yearEl = document.getElementById('year');
+            if (yearEl) {{ yearEl.textContent = new Date().getFullYear(); }}
+            const toggle = document.querySelector('.nav-toggle');
+            const menu = document.getElementById('nav-menu');
+            if (toggle && menu) {{
+                toggle.addEventListener('click', () => {{
+                    const open = menu.classList.toggle('open');
+                    toggle.setAttribute('aria-expanded', String(open));
+                }});
+            }}
+
+            const blogBackBtn = document.getElementById('blog-back');
+            if (blogBackBtn) {{
+                blogBackBtn.addEventListener('click', () => {{
+                    window.location.href = '/blogs';
+                }});
+            }}
+        </script>
+    </body>
+</html>"#, title, title, published_date, html_content);
+
+        Ok(html_page)
+    }
+
     fn generate_prompt(message: &str) -> String {
         // Read pages.json for page and section summaries
         let pages_json = fs::read_to_string("pages.json")
@@ -628,10 +803,11 @@ IMPORTANT NAVIGATION INSTRUCTIONS:
 - Available pages: "index" (home page at /), "blogs" (blogs page at /blogs)
 - The index page has the following sections with IDs: home, about, experience, competencies, soft-skills, education, organizations, certificates, awards, contact
 - The blogs page has a listing section and individual blog posts
-- If the user's question requires viewing a specific page or section, you MUST include a navigation instruction in your response
+- Individual blog posts are accessible at /blogs/:slug (e.g., /blogs/welcome-to-my-blog, /blogs/getting-started-with-rust)
+- If the user's question requires viewing a specific page, section, or blog post, you MUST include a navigation instruction in your response
 - Format your response as JSON with two fields:
   1. "response": Your text response to the user
-  2. "navigation": An object with "page" (the page to navigate to: "index" or "blogs"), "sectionId" (the section ID to navigate to, if applicable), and "needed" (true/false)
+  2. "navigation": An object with "page" (the page to navigate to: "index", "blogs", or a blog post URL like "/blogs/welcome-to-my-blog"), "sectionId" (the section ID to navigate to, if applicable), and "needed" (true/false)
   
 Example response formats:
 {{
@@ -658,6 +834,15 @@ Example response formats:
     "needed": true,
     "page": "/",
     "sectionId": "contact"
+  }}
+}}
+
+{{
+  "response": "Let me show you the blog post about getting started with Rust.",
+  "navigation": {{
+    "needed": true,
+    "page": "/blogs/getting-started-with-rust",
+    "sectionId": null
   }}
 }}
 

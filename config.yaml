@@ -7,7 +7,7 @@ static:
   index_file: index.html
   auto_index: true
   routes:
-    "/blogs": "blogs.html"
+    "/blogs": "blogs/index.html"
 
 content_types:
   ".md": "text/markdown; charset=utf-8"

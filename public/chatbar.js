@@ -167,6 +167,40 @@
         return result || '<p></p>';
     }
 
+    // Storage key for chat messages
+    const STORAGE_KEY = 'portfolio_chat_messages';
+
+    // Save messages to localStorage
+    function saveMessages(messages) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+        } catch (error) {
+            console.error('Error saving messages to localStorage:', error);
+        }
+    }
+
+    // Load messages from localStorage
+    function loadMessages() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                return JSON.parse(stored);
+            }
+        } catch (error) {
+            console.error('Error loading messages from localStorage:', error);
+        }
+        return [];
+    }
+
+    // Clear messages from localStorage
+    function clearStoredMessages() {
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+        } catch (error) {
+            console.error('Error clearing messages from localStorage:', error);
+        }
+    }
+
     // Initialize chatbar when DOM is ready
     function initChatbar() {
         const chatbar = document.getElementById('chatbar');
@@ -178,11 +212,64 @@
         const form = chatbar.querySelector('#chatbar-form');
         const input = chatbar.querySelector('#chatbar-input');
         const messagesContainer = chatbar.querySelector('#chatbar-messages');
+        const header = chatbar.querySelector('.chatbar-header');
+
+        // Check if we're on desktop (min-width: 768px)
+        function isDesktop() {
+            return window.matchMedia('(min-width: 768px)').matches;
+        }
+
+        // Auto-open chatbar on desktop on first load (optional - can be removed if you want it closed by default)
+        function handleDesktopMode() {
+            if (isDesktop()) {
+                // Check if user has previously closed it (stored in localStorage)
+                const chatbarState = localStorage.getItem('chatbar_open');
+                if (chatbarState === null) {
+                    // First time - open by default
+                    chatbar.classList.add('open');
+                    toggle?.setAttribute('aria-expanded', 'true');
+                } else {
+                    // Restore previous state
+                    if (chatbarState === 'true') {
+                        chatbar.classList.add('open');
+                        toggle?.setAttribute('aria-expanded', 'true');
+                    } else {
+                        chatbar.classList.remove('open');
+                        toggle?.setAttribute('aria-expanded', 'false');
+                    }
+                }
+            }
+        }
+
+        // Handle window resize
+        function handleResize() {
+            // On resize, maintain current state
+            // If switching from mobile to desktop, restore desktop state
+            if (isDesktop()) {
+                const chatbarState = localStorage.getItem('chatbar_open');
+                if (chatbarState === 'true') {
+                    chatbar.classList.add('open');
+                    toggle?.setAttribute('aria-expanded', 'true');
+                } else if (chatbarState === 'false') {
+                    chatbar.classList.remove('open');
+                    toggle?.setAttribute('aria-expanded', 'false');
+                }
+            }
+        }
+
+        // Initialize desktop mode
+        handleDesktopMode();
+        window.addEventListener('resize', handleResize);
 
         // Toggle chatbar
         function toggleChatbar() {
             const isOpen = chatbar.classList.toggle('open');
             toggle?.setAttribute('aria-expanded', String(isOpen));
+            
+            // Save state to localStorage on desktop
+            if (isDesktop()) {
+                localStorage.setItem('chatbar_open', String(isOpen));
+            }
             
             // Focus input when opening
             if (isOpen) {
@@ -194,6 +281,74 @@
         function closeChatbar() {
             chatbar.classList.remove('open');
             toggle?.setAttribute('aria-expanded', 'false');
+            
+            // Save state to localStorage on desktop
+            if (isDesktop()) {
+                localStorage.setItem('chatbar_open', 'false');
+            }
+        }
+
+        // Delete all chat messages
+        function deleteChat() {
+            if (confirm('Are you sure you want to delete all chat messages? This action cannot be undone.')) {
+                // Clear messages array
+                messages = [];
+                
+                // Clear localStorage
+                clearStoredMessages();
+                
+                // Clear messages container
+                if (messagesContainer) {
+                    messagesContainer.innerHTML = '';
+                }
+                
+                // Reset to welcome message
+                messages = [{
+                    text: 'Hello! How can I help you today?',
+                    type: 'system',
+                    timestamp: Date.now()
+                }];
+                saveMessages(messages);
+                
+                // Render welcome message
+                renderMessage('Hello! How can I help you today?', 'system', false);
+            }
+        }
+
+        // Create delete button dynamically
+        function createDeleteButton() {
+            if (!header) return;
+            
+            // Check if delete button already exists
+            if (header.querySelector('.chatbar-delete')) return;
+            
+            // Create actions container if it doesn't exist
+            let actionsContainer = header.querySelector('.chatbar-header-actions');
+            if (!actionsContainer) {
+                actionsContainer = document.createElement('div');
+                actionsContainer.className = 'chatbar-header-actions';
+                
+                // Move close button into actions container if it exists
+                if (closeBtn && closeBtn.parentNode === header) {
+                    header.removeChild(closeBtn);
+                    actionsContainer.appendChild(closeBtn);
+                }
+                
+                header.appendChild(actionsContainer);
+            }
+            
+            // Create delete button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'chatbar-delete';
+            deleteBtn.setAttribute('aria-label', 'Delete chat');
+            deleteBtn.innerHTML = `
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+            `;
+            deleteBtn.addEventListener('click', deleteChat);
+            actionsContainer.appendChild(deleteBtn);
         }
 
         // Navigate to a specific page and section
@@ -204,6 +359,9 @@
             // Determine target path based on page
             if (page === 'blogs') {
                 targetPath = '/blogs';
+            } else if (page && page.startsWith('/blogs/')) {
+                // Handle blog post navigation (e.g., /blogs/welcome-to-my-blog)
+                targetPath = page;
             } else if (page === 'index' || !page) {
                 targetPath = '/';
             }
@@ -212,7 +370,8 @@
             if (currentPath !== targetPath) {
                 // Build URL with section hash if needed
                 let targetUrl = targetPath;
-                if (sectionId) {
+                if (sectionId && !targetPath.startsWith('/blogs/')) {
+                    // Only add section hash if not navigating to a blog post
                     targetUrl += `#${sectionId}`;
                 }
                 
@@ -266,8 +425,39 @@
         // Call handleHashNavigation after initialization
         handleHashNavigation();
 
-        // Add message to chat
-        function addMessage(text, type = 'user') {
+        // Array to store messages in memory
+        let messages = [];
+
+        // Load messages from localStorage on initialization
+        function loadStoredMessages() {
+            if (!messagesContainer) return;
+            
+            const storedMessages = loadMessages();
+            if (storedMessages.length > 0) {
+                // Clear the initial welcome message if we have stored messages
+                messagesContainer.innerHTML = '';
+                messages = storedMessages;
+                
+                // Render all stored messages
+                storedMessages.forEach(msg => {
+                    renderMessage(msg.text, msg.type, false); // false = don't save again
+                });
+                
+                // Scroll to bottom
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            } else {
+                // No stored messages, keep the initial welcome message
+                messages = [{
+                    text: 'Hello! How can I help you today?',
+                    type: 'system',
+                    timestamp: Date.now()
+                }];
+                saveMessages(messages);
+            }
+        }
+
+        // Render a message in the UI
+        function renderMessage(text, type = 'user', shouldSave = true) {
             if (!messagesContainer) return;
 
             const messageDiv = document.createElement('div');
@@ -289,7 +479,25 @@
             
             // Scroll to bottom
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // Save to localStorage if needed
+            if (shouldSave) {
+                messages.push({
+                    text: text,
+                    type: type,
+                    timestamp: Date.now()
+                });
+                saveMessages(messages);
+            }
         }
+
+        // Add message to chat (wrapper for renderMessage with saving enabled)
+        function addMessage(text, type = 'user') {
+            renderMessage(text, type, true);
+        }
+
+        // Load stored messages on initialization
+        loadStoredMessages();
 
         // Handle form submission
         function handleSubmit(e) {
@@ -331,6 +539,9 @@
                 console.error('Error sending message to API: ', error);
             });
         }
+
+        // Create delete button
+        createDeleteButton();
 
         // Event listeners
         toggle?.addEventListener('click', toggleChatbar);
