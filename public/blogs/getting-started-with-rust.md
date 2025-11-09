@@ -1,6 +1,6 @@
 # Getting Started with Rust
 
-**Published:** January 2025
+**Published:** November 2025
 
 Rust is a systems programming language that focuses on safety, speed, and concurrency. In this post, I'll share my experience learning Rust and building this portfolio website with it.
 

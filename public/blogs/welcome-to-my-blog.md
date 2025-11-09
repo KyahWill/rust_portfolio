@@ -1,6 +1,6 @@
 # Welcome to My Blog
 
-**Published:** January 2025
+**Published:** November 2025
 
 This is my first blog post! I'm excited to share my thoughts, experiences, and insights about software development, project management, and technology.
 
