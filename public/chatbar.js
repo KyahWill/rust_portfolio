@@ -196,6 +196,29 @@
             toggle?.setAttribute('aria-expanded', 'false');
         }
 
+        // Navigate to a specific section on the page
+        function navigateToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                // Smooth scroll to the section
+                section.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+                
+                // Optional: Highlight the section briefly
+                section.style.transition = 'background-color 0.3s ease';
+                const originalBg = section.style.backgroundColor;
+                section.style.backgroundColor = 'rgba(47, 52, 58, 0.1)';
+                
+                setTimeout(() => {
+                    section.style.backgroundColor = originalBg || '';
+                }, 2000);
+            } else {
+                console.warn(`Section with ID "${sectionId}" not found`);
+            }
+        }
+
         // Add message to chat
         function addMessage(text, type = 'user') {
             if (!messagesContainer) return;
@@ -248,6 +271,12 @@
             .then(data => {
                 console.log('API response: ', data);
                 addMessage(data.response, 'system');
+
+                
+                // Handle navigation if needed
+                if (data.navigation && data.navigation.needed && data.navigation.sectionId) {
+                    navigateToSection(data.navigation.sectionId);
+                }
             })
             .catch(error => {
                 console.error('Error sending message to API: ', error);

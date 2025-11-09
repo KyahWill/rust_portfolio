@@ -352,23 +352,117 @@ impl Server {
             .map(|p| p.text.clone())
             .ok_or_else(|| "No response text in Gemini API response".to_string())?;
 
+        // Parse the JSON response from Gemini
+        #[derive(Deserialize)]
+        struct GeminiParsedResponse {
+            response: String,
+            navigation: NavigationData,
+        }
+
+        #[derive(Deserialize)]
+        struct NavigationData {
+            needed: bool,
+            #[serde(rename = "sectionId")]
+            section_id: Option<String>,
+        }
+
+        // Extract JSON from markdown code blocks if present
+        let json_text = Server::extract_json_from_markdown(&response_text);
+        
+        // Try to parse as JSON, fallback to plain text if parsing fails
+        let parsed: Result<GeminiParsedResponse, _> = serde_json::from_str(&json_text);
+        
+        let (response_message, navigation) = match parsed {
+            Ok(parsed_response) => {
+                // Successfully parsed JSON with navigation data
+                (parsed_response.response, parsed_response.navigation)
+            }
+            Err(e) => {
+                // Fallback: treat as plain text response with no navigation
+                eprintln!("Failed to parse JSON response: {:?}, text: {}", e, json_text);
+                (response_text, NavigationData {
+                    needed: false,
+                    section_id: None,
+                })
+            }
+        };
+
         // Return JSON response for chatbar.js
         #[derive(Serialize)]
         struct ChatResponse {
             response: String,
+            navigation: ChatNavigation,
+        }
+
+        #[derive(Serialize)]
+        struct ChatNavigation {
+            needed: bool,
+            #[serde(rename = "sectionId")]
+            section_id: Option<String>,
         }
 
         let chat_response = ChatResponse {
-            response: response_text,
+            response: response_message,
+            navigation: ChatNavigation {
+                needed: navigation.needed,
+                section_id: navigation.section_id,
+            },
         };
 
         serde_json::to_string(&chat_response)
             .map_err(|e| format!("Failed to serialize response: {}", e))
     }
 
+    fn extract_json_from_markdown(text: &str) -> String {
+        let trimmed = text.trim();
+        
+        // Check if wrapped in markdown code blocks (```json or just ```)
+        if trimmed.starts_with("```") {
+            // Find the first newline after ```
+            if let Some(start_idx) = trimmed.find('\n') {
+                let after_lang = &trimmed[start_idx + 1..];
+                // Find the closing ``` (search from the end)
+                if let Some(end_idx) = after_lang.rfind("```") {
+                    return after_lang[..end_idx].trim().to_string();
+                }
+            }
+        }
+        
+        // If no code blocks found, return as-is
+        trimmed.to_string()
+    }
+
     fn generate_prompt(message: &str) -> String {
         let html_string = fs::read_to_string("public/index.html").unwrap();
-        return format!("You are a helpful assistant. Respond to the following message: {},
-        refer to the following html string as your reference: {}", message, html_string)
+        return format!(r#"You are a helpful assistant for a portfolio website. Respond to the following message: {}
+        
+Refer to the following HTML string as your reference: {}
+
+IMPORTANT NAVIGATION INSTRUCTIONS:
+- The page has the following sections with IDs: home, about, experience, competencies, soft-skills, education, organizations, certificates, awards, contact
+- If the user's question requires viewing a specific section of the page, you MUST include a navigation instruction in your response
+- Format your response as JSON with two fields:
+  1. "response": Your text response to the user
+  2. "navigation": An object with "sectionId" (the section ID to navigate to) and "needed" (true/false)
+  
+Example response format:
+{{
+  "response": "I can help you with that. Let me navigate to the experience section.",
+  "navigation": {{
+    "needed": true,
+    "sectionId": "experience"
+  }}
+}}
+
+If navigation is NOT needed, set "needed" to false and "sectionId" to null:
+{{
+  "response": "Here's the information you requested...",
+  "navigation": {{
+    "needed": false,
+    "sectionId": null
+  }}
+}}
+
+ALWAYS respond in valid JSON format with both "response" and "navigation" fields."#, message, html_string)
     }
 }
