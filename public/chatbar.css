@@ -155,6 +155,110 @@
     border: 1px solid var(--border);
 }
 
+/* Markdown content styles */
+.chatbar-message-content {
+    background: var(--bg);
+    color: var(--text);
+    padding: 0.75rem 1rem;
+    border-radius: 18px 18px 18px 4px;
+    border: 1px solid var(--border);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.chatbar-message-content p {
+    margin: 0.5rem 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+}
+
+.chatbar-message-content p:first-child {
+    margin-top: 0;
+}
+
+.chatbar-message-content p:last-child {
+    margin-bottom: 0;
+}
+
+.chatbar-message-content h1,
+.chatbar-message-content h2,
+.chatbar-message-content h3 {
+    margin: 0.75rem 0 0.5rem 0;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.chatbar-message-content h1 {
+    font-size: 1.25rem;
+}
+
+.chatbar-message-content h2 {
+    font-size: 1.15rem;
+}
+
+.chatbar-message-content h3 {
+    font-size: 1.05rem;
+}
+
+.chatbar-message-content h1:first-child,
+.chatbar-message-content h2:first-child,
+.chatbar-message-content h3:first-child {
+    margin-top: 0;
+}
+
+.chatbar-message-content ul,
+.chatbar-message-content ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.chatbar-message-content li {
+    margin: 0.25rem 0;
+}
+
+.chatbar-message-content code {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+}
+
+.chatbar-message-content pre {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 0.75rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 0.75rem 0;
+}
+
+.chatbar-message-content pre code {
+    background: transparent;
+    padding: 0;
+    font-size: 0.85em;
+    display: block;
+}
+
+.chatbar-message-content a {
+    color: var(--brand);
+    text-decoration: underline;
+    transition: opacity 0.2s;
+}
+
+.chatbar-message-content a:hover {
+    opacity: 0.8;
+}
+
+.chatbar-message-content strong {
+    font-weight: 600;
+}
+
+.chatbar-message-content em {
+    font-style: italic;
+}
+
 .chatbar-input-container {
     padding: 1rem;
     border-top: 1px solid var(--border);

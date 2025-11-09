@@ -296,7 +296,7 @@ impl Server {
         let gemini_request = GeminiRequest {
             contents: vec![GeminiContent {
                 parts: vec![GeminiPart {
-                    text: request.message,
+                    text: Server::generate_prompt(&request.message).to_string(),
                 }],
             }],
         };
@@ -365,5 +365,10 @@ impl Server {
         serde_json::to_string(&chat_response)
             .map_err(|e| format!("Failed to serialize response: {}", e))
     }
-}
 
+    fn generate_prompt(message: &str) -> String {
+        let html_string = fs::read_to_string("public/index.html").unwrap();
+        return format!("You are a helpful assistant. Respond to the following message: {},
+        refer to the following html string as your reference: {}", message, html_string)
+    }
+}

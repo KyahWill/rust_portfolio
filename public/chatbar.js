@@ -2,6 +2,171 @@
 (function() {
     'use strict';
 
+    // Markdown processor for chatbot responses
+    function processMarkdown(text) {
+        if (!text) return '';
+
+        // Split text into lines for better processing
+        const lines = text.split('\n');
+        const processedLines = [];
+        let inCodeBlock = false;
+        let codeBlockContent = [];
+        let inList = false;
+        let listItems = [];
+
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function processInlineMarkdown(line) {
+            // Escape HTML first
+            let html = escapeHtml(line);
+
+            // Code blocks are handled separately, so skip inline code if we're in a code block
+            if (!inCodeBlock) {
+                // Inline code (`code`)
+                html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+                
+                // Bold (**text** or __text__) - but not inside code
+                html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+                
+                // Italic (*text* or _text_) - but not inside code or bold
+                // Process italic after bold to avoid conflicts
+                // Since bold is processed first, we can safely match single asterisks/underscores
+                // Use word boundaries to avoid matching inside words
+                html = html.replace(/\*([^*\n]+?)\*/g, function(match, content) {
+                    // Skip if this was part of bold (shouldn't happen after bold processing)
+                    if (match.includes('**')) return match;
+                    return '<em>' + content + '</em>';
+                });
+                html = html.replace(/_([^_\n]+?)_/g, function(match, content) {
+                    // Skip if this was part of bold
+                    if (match.includes('__')) return match;
+                    return '<em>' + content + '</em>';
+                });
+                
+                // Links [text](url)
+                html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+            }
+
+            return html;
+        }
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const trimmedLine = line.trim();
+
+            // Handle code blocks
+            if (trimmedLine.startsWith('```')) {
+                if (inCodeBlock) {
+                    // End code block
+                    processedLines.push('<pre><code>' + escapeHtml(codeBlockContent.join('\n')) + '</code></pre>');
+                    codeBlockContent = [];
+                    inCodeBlock = false;
+                } else {
+                    // Start code block
+                    inCodeBlock = true;
+                }
+                continue;
+            }
+
+            if (inCodeBlock) {
+                codeBlockContent.push(line);
+                continue;
+            }
+
+            // Handle headings
+            if (trimmedLine.startsWith('### ')) {
+                processedLines.push('<h3>' + processInlineMarkdown(trimmedLine.substring(4)) + '</h3>');
+                continue;
+            }
+            if (trimmedLine.startsWith('## ')) {
+                processedLines.push('<h2>' + processInlineMarkdown(trimmedLine.substring(3)) + '</h2>');
+                continue;
+            }
+            if (trimmedLine.startsWith('# ')) {
+                processedLines.push('<h1>' + processInlineMarkdown(trimmedLine.substring(2)) + '</h1>');
+                continue;
+            }
+
+            // Handle lists
+            if (/^[\-\*] (.+)$/.test(trimmedLine) || /^\d+\. (.+)$/.test(trimmedLine)) {
+                const listItem = trimmedLine.replace(/^[\-\*] (.+)$/, '$1').replace(/^\d+\. (.+)$/, '$1');
+                listItems.push('<li>' + processInlineMarkdown(listItem) + '</li>');
+                inList = true;
+                continue;
+            }
+
+            // End list if we were in one
+            if (inList && trimmedLine === '') {
+                processedLines.push('<ul>' + listItems.join('') + '</ul>');
+                listItems = [];
+                inList = false;
+                continue;
+            }
+
+            // Regular paragraph line
+            if (trimmedLine === '') {
+                if (inList) {
+                    processedLines.push('<ul>' + listItems.join('') + '</ul>');
+                    listItems = [];
+                    inList = false;
+                }
+                processedLines.push('');
+            } else {
+                if (inList) {
+                    processedLines.push('<ul>' + listItems.join('') + '</ul>');
+                    listItems = [];
+                    inList = false;
+                }
+                processedLines.push(processInlineMarkdown(trimmedLine));
+            }
+        }
+
+        // Close any open list or code block
+        if (inList) {
+            processedLines.push('<ul>' + listItems.join('') + '</ul>');
+        }
+        if (inCodeBlock) {
+            processedLines.push('<pre><code>' + escapeHtml(codeBlockContent.join('\n')) + '</code></pre>');
+        }
+
+        // Group consecutive non-empty lines into paragraphs
+        let result = '';
+        let currentParagraph = [];
+
+        for (let i = 0; i < processedLines.length; i++) {
+            const line = processedLines[i];
+            
+            if (line === '') {
+                if (currentParagraph.length > 0) {
+                    result += '<p>' + currentParagraph.join(' ') + '</p>';
+                    currentParagraph = [];
+                }
+            } else if (line.startsWith('<') && (line.startsWith('<h') || line.startsWith('<ul') || line.startsWith('<pre') || line.startsWith('<ol'))) {
+                // Block-level element
+                if (currentParagraph.length > 0) {
+                    result += '<p>' + currentParagraph.join(' ') + '</p>';
+                    currentParagraph = [];
+                }
+                result += line;
+            } else {
+                currentParagraph.push(line);
+            }
+        }
+
+        // Close any remaining paragraph
+        if (currentParagraph.length > 0) {
+            result += '<p>' + currentParagraph.join(' ') + '</p>';
+        }
+
+        return result || '<p></p>';
+    }
+
     // Initialize chatbar when DOM is ready
     function initChatbar() {
         const chatbar = document.getElementById('chatbar');
@@ -38,9 +203,17 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = `chatbar-message chatbar-message-${type}`;
             
-            const p = document.createElement('p');
-            p.textContent = text;
-            messageDiv.appendChild(p);
+            // Process markdown for system messages, plain text for user messages
+            if (type === 'system' || type === 'other') {
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'chatbar-message-content';
+                contentDiv.innerHTML = processMarkdown(text);
+                messageDiv.appendChild(contentDiv);
+            } else {
+                const p = document.createElement('p');
+                p.textContent = text;
+                messageDiv.appendChild(p);
+            }
             
             messagesContainer.appendChild(messageDiv);
             
