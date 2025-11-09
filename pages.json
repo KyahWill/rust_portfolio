@@ -44,12 +44,17 @@
         {
           "slug": "welcome-to-my-blog",
           "title": "Welcome to My Blog",
-          "summary": "First blog post introducing the blog. Covers topics about software development, project management, technology trends, and personal projects. Published January 2025."
+          "summary": "First blog post introducing the blog. Covers topics about software development, project management, technology trends, and personal projects. Published November 2025."
         },
         {
           "slug": "getting-started-with-rust",
           "title": "Getting Started with Rust",
-          "summary": "Blog post about learning Rust and building the portfolio website with it. Discusses Rust's advantages: memory safety, performance, concurrency, and modern tooling. Shares key learnings about ownership, borrowing, Result types, pattern matching, and building efficient web servers. Published January 2025."
+          "summary": "Blog post about learning Rust and building the portfolio website with it. Discusses Rust's advantages: memory safety, performance, concurrency, and modern tooling. Shares key learnings about ownership, borrowing, Result types, pattern matching, and building efficient web servers. Published November 2025."
+        },
+        {
+          "slug": "ai-chatbot-navigation",
+          "title": "AI Assisted Website Navigation",
+          "summary": "Blog post about using AI to assist users in finding the right content they need on a website. Discusses the use cases, how it's built, potential limitations, and test & source code. Published November 2025."
         }
       ]
     }
