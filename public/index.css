@@ -1,14 +1,14 @@
 /* Base */
 :root {
-    --bg: #f4f5f7;
+    --bg: #f0f7ff;
     --panel: #ffffff;
-    --text: #1b1d1f;
-    --muted: #535962;
-    --brand: #2f343a;
-    --brand-2: #6c7077;
-    --accent: #3a3f45;
+    --text: #1a2332;
+    --muted: #5a6c7d;
+    --brand: #4a90e2;
+    --brand-2: #7a9fc8;
+    --accent: #3a7bc8;
     --card: #ffffff;
-    --border: #e1e4e8;
+    --border: #d0dde8;
 }
 
 * { box-sizing: border-box; }
@@ -112,8 +112,8 @@ h1, h2, h3 {
 /* Hero */
 .hero {
     padding: 5rem 0 3rem;
-    background: radial-gradient(1200px 600px at 20% -20%, rgba(0, 0, 0, 0.06), transparent),
-                radial-gradient(900px 500px at 90% 10%, rgba(0, 0, 0, 0.03), transparent);
+    background: radial-gradient(1200px 600px at 20% -20%, rgba(74, 144, 226, 0.08), transparent),
+                radial-gradient(900px 500px at 90% 10%, rgba(74, 144, 226, 0.04), transparent);
 }
 
 .headline {
@@ -204,7 +204,7 @@ a:hover { filter: brightness(0.85); }
 
 .blog-item:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.15);
 }
 
 .blog-item h3 {

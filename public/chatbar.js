@@ -401,7 +401,7 @@
                 // Optional: Highlight the section briefly
                 section.style.transition = 'background-color 0.3s ease';
                 const originalBg = section.style.backgroundColor;
-                section.style.backgroundColor = 'rgba(47, 52, 58, 0.1)';
+                section.style.backgroundColor = 'rgba(74, 144, 226, 0.1)';
                 
                 setTimeout(() => {
                     section.style.backgroundColor = originalBg || '';
