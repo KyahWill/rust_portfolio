@@ -196,7 +196,37 @@
             toggle?.setAttribute('aria-expanded', 'false');
         }
 
-        // Navigate to a specific section on the page
+        // Navigate to a specific page and section
+        function navigateToPageAndSection(page, sectionId) {
+            const currentPath = window.location.pathname;
+            let targetPath = '/';
+            
+            // Determine target path based on page
+            if (page === 'blogs') {
+                targetPath = '/blogs';
+            } else if (page === 'index' || !page) {
+                targetPath = '/';
+            }
+            
+            // If we need to navigate to a different page
+            if (currentPath !== targetPath) {
+                // Build URL with section hash if needed
+                let targetUrl = targetPath;
+                if (sectionId) {
+                    targetUrl += `#${sectionId}`;
+                }
+                
+                // Navigate to the new page
+                window.location.href = targetUrl;
+            } else {
+                // We're already on the correct page, just navigate to section
+                if (sectionId) {
+                    navigateToSection(sectionId);
+                }
+            }
+        }
+        
+        // Navigate to a specific section on the current page
         function navigateToSection(sectionId) {
             const section = document.getElementById(sectionId);
             if (section) {
@@ -205,6 +235,9 @@
                     behavior: 'smooth', 
                     block: 'start' 
                 });
+                
+                // Update URL hash without triggering scroll
+                window.history.pushState(null, '', `#${sectionId}`);
                 
                 // Optional: Highlight the section briefly
                 section.style.transition = 'background-color 0.3s ease';
@@ -218,6 +251,20 @@
                 console.warn(`Section with ID "${sectionId}" not found`);
             }
         }
+        
+        // Handle hash navigation on page load
+        function handleHashNavigation() {
+            const hash = window.location.hash;
+            if (hash) {
+                const sectionId = hash.substring(1); // Remove the #
+                setTimeout(() => {
+                    navigateToSection(sectionId);
+                }, 100); // Small delay to ensure page is fully loaded
+            }
+        }
+        
+        // Call handleHashNavigation after initialization
+        handleHashNavigation();
 
         // Add message to chat
         function addMessage(text, type = 'user') {
@@ -274,8 +321,10 @@
 
                 
                 // Handle navigation if needed
-                if (data.navigation && data.navigation.needed && data.navigation.sectionId) {
-                    navigateToSection(data.navigation.sectionId);
+                if (data.navigation && data.navigation.needed) {
+                    const page = data.navigation.page || null;
+                    const sectionId = data.navigation.sectionId || null;
+                    navigateToPageAndSection(page, sectionId);
                 }
             })
             .catch(error => {

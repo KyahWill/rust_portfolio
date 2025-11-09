@@ -1,0 +1,58 @@
+{
+  "pages": {
+    "index": {
+      "sections": [
+        {
+          "summary": "Home section - Main landing area of the portfolio website"
+        },
+        {
+          "summary": "About section - Introduction to Will Vincent Parrone, a generalist with extensive experience as a Software Developer and Project Manager, also organizing charity projects. Includes contact information: phone (63) 920 653 0261, email wvparrone@gmail.com, and GitHub link."
+        },
+        {
+          "summary": "Experience section - Detailed work history including: Tech Lead/Lead Expert - Solutions Architecture at Globe Telecom (Feb 2025 - Present), Software Developer & Project Manager (Freelance, March 2023 - Present), Software Developer at Sermon Shots Inc. (Sept 2023 - April 2024), Business Analyst/Technical Sales Engineer at Tribe Inc. (June 2023 - Sept 2023), Junior Business Analyst Intern & Trainee at Halcyon Digital Media Design (Aug 2022 - Dec 2022), Freelance Business Analyst & Software Developer at Ethos Bytes (July 2021 - Aug 2022), and Admin Intern at Symph (Feb 2021 - May 2021)."
+        },
+        {
+          "summary": "Competencies section - Technical and non-technical skills. Non-Tech: Business Analysis (methods, requirements gathering, process analysis), Project Management (Agile, Scrum, Kanban, ScrumBan, Waterfall), Client-Facing skills (negotiation, risk de-escalation, rapport building, public speaking). Tech: Languages (Python, JavaScript, TypeScript, Dart, Rust, PHP), Frontend (Vue 2 & 3, Nuxt 3, React, Next, Svelte 3 & 5, SvelteKit, Tailwind, Bootstrap), Backend & Databases (Django, Node.js, Laravel, Neo4j, Firebase, PostgreSQL, MySQL, Supabase), Cloud & Tools (DigitalOcean, Vercel, Vultr, AWS, Jira, Trello, Git, GitHub, GitLab, Selenium, Cypress, Windows, Linux, Manjaro, Arch, Ubuntu Server, Odoo)."
+        },
+        {
+          "summary": "Soft Skills section - Lists key soft skills: Pragmatic Optimism, Active Listening, Empathy, Brainstorming, Problem-solving, Stress Management, Conflict Management, and Curiosity."
+        },
+        {
+          "summary": "Education section - BS Computer Science from Polytechnic University of the Philippines, Sta. Mesa (June 2019 - 2023)."
+        },
+        {
+          "summary": "Organizations section - Leadership roles: President at Rotary Club of Fort Bonifacio Global City (July 2025 - Present), Chairman at Rotary Satellite Club of Fort Bonifacio Global City (January 2022 - June 2025), and Core Volunteer at Python Philippines (July 2023 - Present)."
+        },
+        {
+          "summary": "Certificates section - Lists professional certificates: Foundations of Project Management (Coursera, June 2023), Foundations of User Experience (UX) Design (Coursera, November 2022), Initiating and Planning Projects (Coursera, February 2021), Leadership and Emotional Intelligence (Coursera, February 2021), and Negotiation skills: Negotiate and resolve conflict (Coursera, February 2021)."
+        },
+        {
+          "summary": "Awards section - Awards and scholarships: DOST Scholarship (Merit Scholarship for top-percentile performance), and Globe Code To Career Hackathon MVP (awarded for exemplary showmanship and leadership)."
+        },
+        {
+          "summary": "Contact section - Contact information with links to call, email, and GitHub profile."
+        }
+      ]
+    },
+    "blogs": {
+      "sections": [
+        {
+          "summary": "Blogs listing page - Displays a list of all available blog posts with their titles and published dates."
+        }
+      ],
+      "posts": [
+        {
+          "slug": "welcome-to-my-blog",
+          "title": "Welcome to My Blog",
+          "summary": "First blog post introducing the blog. Covers topics about software development, project management, technology trends, and personal projects. Published January 2025."
+        },
+        {
+          "slug": "getting-started-with-rust",
+          "title": "Getting Started with Rust",
+          "summary": "Blog post about learning Rust and building the portfolio website with it. Discusses Rust's advantages: memory safety, performance, concurrency, and modern tooling. Shares key learnings about ownership, borrowing, Result types, pattern matching, and building efficient web servers. Published January 2025."
+        }
+      ]
+    }
+  }
+}
+

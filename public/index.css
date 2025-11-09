@@ -151,3 +151,184 @@ a:hover { filter: brightness(0.85); }
 
 /* Minimal interactivity (toggles via data attributes) */
 /* JS will toggle .open class on .nav-menu to show/hide */
+
+/* Blogs */
+.blogs-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.blog-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.blog-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.blog-item h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+}
+
+.blog-item .blog-link {
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.blog-item .blog-link:hover {
+    color: var(--brand);
+}
+
+.blog-meta {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.blog-post {
+    margin-top: 1.5rem;
+}
+
+.blog-back {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.blog-back:hover {
+    background: var(--bg);
+    border-color: var(--brand);
+}
+
+.blog-content {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 2rem;
+    margin-top: 1rem;
+}
+
+.blog-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.blog-header h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    line-height: 1.2;
+}
+
+.blog-body {
+    line-height: 1.8;
+    color: var(--text);
+}
+
+.blog-body h1,
+.blog-body h2,
+.blog-body h3,
+.blog-body h4,
+.blog-body h5,
+.blog-body h6 {
+    font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+}
+
+.blog-body h1 { font-size: 2rem; }
+.blog-body h2 { font-size: 1.75rem; }
+.blog-body h3 { font-size: 1.5rem; }
+.blog-body h4 { font-size: 1.25rem; }
+
+.blog-body p {
+    margin: 1rem 0;
+}
+
+.blog-body ul,
+.blog-body ol {
+    margin: 1rem 0;
+    padding-left: 2rem;
+}
+
+.blog-body li {
+    margin: 0.5rem 0;
+}
+
+.blog-body a {
+    color: var(--brand);
+    text-decoration: underline;
+}
+
+.blog-body a:hover {
+    color: var(--accent);
+}
+
+.blog-body code {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.2rem 0.4rem;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.9em;
+}
+
+.blog-body pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+.blog-body pre code {
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+.blog-body blockquote {
+    border-left: 4px solid var(--brand);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: var(--muted);
+    font-style: italic;
+}
+
+.blog-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+
+.blog-body hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2rem 0;
+}
+
+@media (max-width: 640px) {
+    .blog-content {
+        padding: 1.5rem;
+    }
+    
+    .blog-header h2 {
+        font-size: 1.5rem;
+    }
+}

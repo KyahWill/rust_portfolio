@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Blogs — Will Vincent Parrone</title>
+        <link rel="stylesheet" href="/index.css" />
+        <link rel="stylesheet" href="/chatbar.css" />
+    </head>
+    <body>
+        <header class="site-header">
+            <nav class="nav" aria-label="Primary">
+                <a class="brand" href="/">WVP</a>
+                <button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu">Menu</button>
+                <ul id="nav-menu" class="nav-menu">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/blogs">Blogs</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main>
+            <div class="container" style="padding: 3rem 0;">
+                <h1>Blogs</h1>
+                <div id="blogs-list" class="blogs-list">
+                    <p>Loading blogs...</p>
+                </div>
+                <div id="blog-post" class="blog-post" style="display: none;">
+                    <button id="blog-back" class="blog-back" aria-label="Back to blogs">← Back to Blogs</button>
+                    <article id="blog-content" class="blog-content"></article>
+                </div>
+            </div>
+        </main>
+
+        <footer class="site-footer">
+            <div class="container">
+                <small>© <span id="year"></span> Will Vincent Parrone</small>
+            </div>
+        </footer>
+
+        <!-- Chatbar Component -->
+        <div id="chatbar" class="chatbar">
+            <button class="chatbar-toggle" aria-label="Toggle chat" aria-expanded="false">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+            </button>
+            <div class="chatbar-panel">
+                <div class="chatbar-header">
+                    <h3>Chat</h3>
+                    <button class="chatbar-close" aria-label="Close chat">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="chatbar-messages" id="chatbar-messages">
+                    <div class="chatbar-message chatbar-message-system">
+                        <p>Hello! How can I help you today?</p>
+                    </div>
+                </div>
+                <div class="chatbar-input-container">
+                    <form id="chatbar-form" class="chatbar-form">
+                        <input 
+                            type="text" 
+                            id="chatbar-input" 
+                            class="chatbar-input" 
+                            placeholder="Type your message..." 
+                            autocomplete="off"
+                            aria-label="Message input"
+                        />
+                        <button type="submit" class="chatbar-send" aria-label="Send message">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"/>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script src="/chatbar.js"></script>
+        <script>
+            const yearEl = document.getElementById('year');
+            if (yearEl) { yearEl.textContent = new Date().getFullYear(); }
+            const toggle = document.querySelector('.nav-toggle');
+            const menu = document.getElementById('nav-menu');
+            if (toggle && menu) {
+                toggle.addEventListener('click', () => {
+                    const open = menu.classList.toggle('open');
+                    toggle.setAttribute('aria-expanded', String(open));
+                });
+            }
+
+            // Blog functionality
+            const blogsListEl = document.getElementById('blogs-list');
+            const blogPostEl = document.getElementById('blog-post');
+            const blogContentEl = document.getElementById('blog-content');
+            const blogBackBtn = document.getElementById('blog-back');
+
+            // Check if we're viewing a specific blog post from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const blogSlug = urlParams.get('post');
+
+            async function loadBlogs() {
+                try {
+                    const response = await fetch('/api/blogs');
+                    const data = await response.json();
+                    displayBlogsList(data.blogs);
+                } catch (error) {
+                    console.error('Error loading blogs:', error);
+                    if (blogsListEl) {
+                        blogsListEl.innerHTML = '<p>Error loading blogs. Please try again later.</p>';
+                    }
+                }
+            }
+
+            function displayBlogsList(blogs) {
+                if (!blogsListEl) return;
+                
+                if (blogs.length === 0) {
+                    blogsListEl.innerHTML = '<p>No blog posts yet. Check back soon!</p>';
+                    return;
+                }
+
+                const html = blogs.map(blog => `
+                    <article class="blog-item">
+                        <h3><a href="#" class="blog-link" data-slug="${blog.slug}">${blog.title}</a></h3>
+                        <div class="blog-meta">Published: ${blog.published_date}</div>
+                    </article>
+                `).join('');
+
+                blogsListEl.innerHTML = html;
+
+                // Add click handlers for blog links
+                blogsListEl.querySelectorAll('.blog-link').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const slug = link.getAttribute('data-slug');
+                        loadBlogPost(slug);
+                    });
+                });
+            }
+
+            async function loadBlogPost(slug) {
+                try {
+                    const response = await fetch(`/api/blog/${slug}`);
+                    const data = await response.json();
+                    displayBlogPost(data);
+                    // Update URL without reload
+                    window.history.pushState({ slug }, '', `/blogs?post=${slug}`);
+                    // Update page title
+                    document.title = `${slug} — Blogs — Will Vincent Parrone`;
+                } catch (error) {
+                    console.error('Error loading blog post:', error);
+                    if (blogContentEl) {
+                        blogContentEl.innerHTML = '<p>Error loading blog post. Please try again later.</p>';
+                    }
+                }
+            }
+
+            function displayBlogPost(blog) {
+                if (!blogContentEl || !blogPostEl || !blogsListEl) return;
+
+                blogContentEl.innerHTML = `
+                    <header class="blog-header">
+                        <h2>${blog.slug}</h2>
+                        <div class="blog-meta">Published: ${blog.published_date}</div>
+                    </header>
+                    <div class="blog-body">${blog.content}</div>
+                `;
+
+                blogsListEl.style.display = 'none';
+                blogPostEl.style.display = 'block';
+
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            if (blogBackBtn) {
+                blogBackBtn.addEventListener('click', () => {
+                    if (blogPostEl) blogPostEl.style.display = 'none';
+                    if (blogsListEl) blogsListEl.style.display = 'block';
+                    // Reset URL
+                    window.history.pushState({}, '', '/blogs');
+                    // Reset page title
+                    document.title = 'Blogs — Will Vincent Parrone';
+                    loadBlogs();
+                });
+            }
+
+            // Load blog post if slug is in URL, otherwise load blog list
+            if (blogSlug) {
+                loadBlogPost(blogSlug);
+            } else {
+                loadBlogs();
+            }
+
+            // Handle browser back/forward buttons
+            window.addEventListener('popstate', (e) => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const slug = urlParams.get('post');
+                if (slug) {
+                    loadBlogPost(slug);
+                } else {
+                    if (blogPostEl) blogPostEl.style.display = 'none';
+                    if (blogsListEl) blogsListEl.style.display = 'block';
+                    document.title = 'Blogs — Will Vincent Parrone';
+                    loadBlogs();
+                }
+            });
+        </script>
+    </body>
+</html>
+

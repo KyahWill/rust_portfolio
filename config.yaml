@@ -6,6 +6,8 @@ static:
   root_dir: public
   index_file: index.html
   auto_index: true
+  routes:
+    "/blogs": "blogs.html"
 
 content_types:
   ".md": "text/markdown; charset=utf-8"

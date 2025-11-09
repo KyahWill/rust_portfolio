@@ -2,11 +2,13 @@ use std::io::{BufReader, prelude::*};
 use std::net::{TcpListener, TcpStream};
 use std::fs;
 use std::collections::HashMap;
+use std::path::Path;
 
 use crate::config::AppConfig;
 use crate::static_files::{resolve_content_type, StaticFileResolver};
 
 use serde::{Deserialize, Serialize};
+use pulldown_cmark::{Parser, Options, html};
 
 pub struct Route {
     
@@ -179,6 +181,61 @@ impl Server {
         let route = http_header[1];
         println!("METHOD: {}, ROUTE: {}", method, route);
         // --- End of request parsing ---
+
+        // Handle /api/blogs route
+        if route == "/api/blogs" && method == "GET" {
+            match self.handle_blogs_list_api() {
+                Ok(json_response) => {
+                    let response_body = json_response.as_bytes();
+                    let headers = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\n\r\n",
+                        response_body.len()
+                    );
+                    let mut response = headers.into_bytes();
+                    response.extend_from_slice(response_body);
+                    tcp_stream.write_all(&response).ok();
+                    return;
+                }
+                Err(e) => {
+                    eprintln!("Error handling blogs list API: {:?}", e);
+                    let error_response = format!(
+                        "HTTP/1.1 500 Internal Server Error\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{{\"error\":\"{}\"}}",
+                        e.len(),
+                        e
+                    );
+                    tcp_stream.write_all(error_response.as_bytes()).ok();
+                    return;
+                }
+            }
+        }
+
+        // Handle /api/blog/:slug route
+        if route.starts_with("/api/blog/") && method == "GET" {
+            let slug = route.strip_prefix("/api/blog/").unwrap_or("");
+            match self.handle_blog_post_api(slug) {
+                Ok(json_response) => {
+                    let response_body = json_response.as_bytes();
+                    let headers = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\n\r\n",
+                        response_body.len()
+                    );
+                    let mut response = headers.into_bytes();
+                    response.extend_from_slice(response_body);
+                    tcp_stream.write_all(&response).ok();
+                    return;
+                }
+                Err(e) => {
+                    eprintln!("Error handling blog post API: {:?}", e);
+                    let error_response = format!(
+                        "HTTP/1.1 500 Internal Server Error\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{{\"error\":\"{}\"}}",
+                        e.len(),
+                        e
+                    );
+                    tcp_stream.write_all(error_response.as_bytes()).ok();
+                    return;
+                }
+            }
+        }
 
         // Handle /api/chat route
         if route == "/api/chat" && method == "POST" {
@@ -362,6 +419,8 @@ impl Server {
         #[derive(Deserialize)]
         struct NavigationData {
             needed: bool,
+            #[serde(rename = "page")]
+            page: Option<String>,
             #[serde(rename = "sectionId")]
             section_id: Option<String>,
         }
@@ -382,6 +441,7 @@ impl Server {
                 eprintln!("Failed to parse JSON response: {:?}, text: {}", e, json_text);
                 (response_text, NavigationData {
                     needed: false,
+                    page: None,
                     section_id: None,
                 })
             }
@@ -397,6 +457,8 @@ impl Server {
         #[derive(Serialize)]
         struct ChatNavigation {
             needed: bool,
+            #[serde(rename = "page")]
+            page: Option<String>,
             #[serde(rename = "sectionId")]
             section_id: Option<String>,
         }
@@ -405,6 +467,7 @@ impl Server {
             response: response_message,
             navigation: ChatNavigation {
                 needed: navigation.needed,
+                page: navigation.page,
                 section_id: navigation.section_id,
             },
         };
@@ -432,37 +495,182 @@ impl Server {
         trimmed.to_string()
     }
 
+    fn handle_blogs_list_api(&self) -> Result<String, String> {
+        let blogs_dir = Path::new("public/blogs");
+        
+        if !blogs_dir.exists() {
+            return Ok(r#"{"blogs":[]}"#.to_string());
+        }
+
+        let entries = fs::read_dir(blogs_dir)
+            .map_err(|e| format!("Failed to read blogs directory: {}", e))?;
+
+        let mut blogs: Vec<BlogMetadata> = Vec::new();
+
+        for entry in entries {
+            let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+            let path = entry.path();
+            
+            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {
+                if let Some(file_name) = path.file_stem().and_then(|s| s.to_str()) {
+                    let slug = file_name.to_string();
+                    let content = fs::read_to_string(&path)
+                        .map_err(|e| format!("Failed to read blog file: {}", e))?;
+                    
+                    // Extract title and date from markdown (first line is usually title)
+                    let title = content.lines()
+                        .next()
+                        .unwrap_or(&slug)
+                        .trim_start_matches('#')
+                        .trim()
+                        .to_string();
+                    
+                    // Try to extract date from content (look for **Published:** pattern)
+                    let published_date = content.lines()
+                        .find(|line| line.contains("**Published:**") || line.contains("Published:"))
+                        .and_then(|line| {
+                            line.split("Published:").nth(1)
+                                .or_else(|| line.split("**Published:**").nth(1))
+                                .map(|s| s.trim().trim_matches('*').trim().to_string())
+                        })
+                        .unwrap_or_else(|| "Unknown".to_string());
+
+                    blogs.push(BlogMetadata {
+                        slug,
+                        title,
+                        published_date,
+                    });
+                }
+            }
+        }
+
+        // Sort by published date (most recent first)
+        blogs.sort_by(|a, b| b.published_date.cmp(&a.published_date));
+
+        #[derive(Serialize)]
+        struct BlogListResponse {
+            blogs: Vec<BlogMetadata>,
+        }
+
+        #[derive(Serialize)]
+        struct BlogMetadata {
+            slug: String,
+            title: String,
+            published_date: String,
+        }
+
+        let response = BlogListResponse { blogs };
+        serde_json::to_string(&response)
+            .map_err(|e| format!("Failed to serialize blog list: {}", e))
+    }
+
+    fn handle_blog_post_api(&self, slug: &str) -> Result<String, String> {
+        let blog_path = Path::new("public/blogs").join(format!("{}.md", slug));
+        
+        if !blog_path.exists() {
+            return Err(format!("Blog post '{}' not found", slug));
+        }
+
+        let markdown_content = fs::read_to_string(&blog_path)
+            .map_err(|e| format!("Failed to read blog file: {}", e))?;
+
+        // Parse markdown to HTML
+        let parser = Parser::new_ext(&markdown_content, Options::all());
+        let mut html_output = String::new();
+        html::push_html(&mut html_output, parser);
+
+        // Extract metadata
+        let title = markdown_content.lines()
+            .next()
+            .unwrap_or(slug)
+            .trim_start_matches('#')
+            .trim()
+            .to_string();
+        
+        let published_date = markdown_content.lines()
+            .find(|line| line.contains("**Published:**") || line.contains("Published:"))
+            .and_then(|line| {
+                line.split("Published:").nth(1)
+                    .or_else(|| line.split("**Published:**").nth(1))
+                    .map(|s| s.trim().trim_matches('*').trim().to_string())
+            })
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        #[derive(Serialize)]
+        struct BlogPostResponse {
+            slug: String,
+            title: String,
+            published_date: String,
+            content: String,
+        }
+
+        let response = BlogPostResponse {
+            slug: slug.to_string(),
+            title,
+            published_date,
+            content: html_output,
+        };
+
+        serde_json::to_string(&response)
+            .map_err(|e| format!("Failed to serialize blog post: {}", e))
+    }
+
     fn generate_prompt(message: &str) -> String {
-        let html_string = fs::read_to_string("public/index.html").unwrap();
+        // Read pages.json for page and section summaries
+        let pages_json = fs::read_to_string("pages.json")
+            .unwrap_or_else(|_| r#"{"pages":{}}"#.to_string());
+        
         return format!(r#"You are a helpful assistant for a portfolio website. Respond to the following message: {}
         
-Refer to the following HTML string as your reference: {}
+Refer to the following pages and sections summary as your reference: {}
 
 IMPORTANT NAVIGATION INSTRUCTIONS:
-- The page has the following sections with IDs: home, about, experience, competencies, soft-skills, education, organizations, certificates, awards, contact
-- If the user's question requires viewing a specific section of the page, you MUST include a navigation instruction in your response
+- Available pages: "index" (home page at /), "blogs" (blogs page at /blogs)
+- The index page has the following sections with IDs: home, about, experience, competencies, soft-skills, education, organizations, certificates, awards, contact
+- The blogs page has a listing section and individual blog posts
+- If the user's question requires viewing a specific page or section, you MUST include a navigation instruction in your response
 - Format your response as JSON with two fields:
   1. "response": Your text response to the user
-  2. "navigation": An object with "sectionId" (the section ID to navigate to) and "needed" (true/false)
+  2. "navigation": An object with "page" (the page to navigate to: "index" or "blogs"), "sectionId" (the section ID to navigate to, if applicable), and "needed" (true/false)
   
-Example response format:
+Example response formats:
 {{
   "response": "I can help you with that. Let me navigate to the experience section.",
   "navigation": {{
     "needed": true,
+    "page": "index",
     "sectionId": "experience"
   }}
 }}
 
-If navigation is NOT needed, set "needed" to false and "sectionId" to null:
 {{
-  "response": "Here's the information you requested...",
+  "response": "Let me show you the blogs page.",
   "navigation": {{
-    "needed": false,
+    "needed": true,
+    "page": "blogs",
     "sectionId": null
   }}
 }}
 
-ALWAYS respond in valid JSON format with both "response" and "navigation" fields."#, message, html_string)
+{{
+  "response": "I'll navigate to the contact section for you.",
+  "navigation": {{
+    "needed": true,
+    "page": "/",
+    "sectionId": "contact"
+  }}
+}}
+
+If navigation is NOT needed, set "needed" to false and both "page" and "sectionId" to null:
+{{
+  "response": "Here's the information you requested...",
+  "navigation": {{
+    "needed": false,
+    "page": null,
+    "sectionId": null
+  }}
+}}
+
+ALWAYS respond in valid JSON format with both "response" and "navigation" fields."#, message, pages_json)
     }
 }
