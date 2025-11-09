@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Will Vincent Parrone — Portfolio</title>
         <link rel="stylesheet" href="/index.css" />
+        <link rel="stylesheet" href="/chatbar.css" />
     </head>
     <body>
         <header class="site-header">
@@ -347,6 +348,51 @@
                 <small>© <span id="year"></span> Will Vincent Parrone</small>
             </div>
         </footer>
+
+        <!-- Chatbar Component -->
+        <div id="chatbar" class="chatbar">
+            <button class="chatbar-toggle" aria-label="Toggle chat" aria-expanded="false">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+            </button>
+            <div class="chatbar-panel">
+                <div class="chatbar-header">
+                    <h3>Chat</h3>
+                    <button class="chatbar-close" aria-label="Close chat">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="chatbar-messages" id="chatbar-messages">
+                    <div class="chatbar-message chatbar-message-system">
+                        <p>Hello! How can I help you today?</p>
+                    </div>
+                </div>
+                <div class="chatbar-input-container">
+                    <form id="chatbar-form" class="chatbar-form">
+                        <input 
+                            type="text" 
+                            id="chatbar-input" 
+                            class="chatbar-input" 
+                            placeholder="Type your message..." 
+                            autocomplete="off"
+                            aria-label="Message input"
+                        />
+                        <button type="submit" class="chatbar-send" aria-label="Send message">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"/>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script src="/chatbar.js"></script>
         <script>
             const yearEl = document.getElementById('year');
             if (yearEl) { yearEl.textContent = new Date().getFullYear(); }
